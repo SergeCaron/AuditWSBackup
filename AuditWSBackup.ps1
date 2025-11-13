@@ -45,7 +45,7 @@ else {
 	[System.Diagnostics.Process]::Start($newProcess)
 
 	# Exit from the current, unelevated, process
-	Exit
+	exit
 }
 
 # Run your code that needs to be elevated here...
@@ -55,7 +55,7 @@ $DesktopPath = [System.Environment]::GetFolderPath([System.Environment+SpecialFo
 Start-Transcript -Path "$DesktopPath\WSBCatalogAudit.txt" -Append
 
 $OSCaption = (Get-WmiObject Win32_OperatingSystem).Caption
-If ((Get-WmiObject Win32_OperatingSystem).ProductType -eq 1) {
+if ((Get-WmiObject Win32_OperatingSystem).ProductType -eq 1) {
 	Write-Host
 	Write-Host "Windows Backup Catalog Audit for" $env:ComputerName "[" $OSCaption "]"
 	Write-Host "------------------------------------------------------------------------------------------"
@@ -63,52 +63,52 @@ If ((Get-WmiObject Win32_OperatingSystem).ProductType -eq 1) {
 	# There is limited WBEngine support on Windows Workstations
 	$WBConfig = $(wbadmin enable backup)
 	$WBadminRelease = $($WBConfig[0] -split "-")[0].Trim()
-	If ( $WBadminRelease -eq "wbadmin 1.0" ) {
-		If ( ($Null -eq $WBConfig[7]) -and ($Null -eq $WBConfig[12]) ) {
+	if ( $WBadminRelease -eq "wbadmin 1.0" ) {
+		if ( ($Null -eq $WBConfig[7]) -and ($Null -eq $WBConfig[12]) ) {
 			# Nothing is scheduled yet
 			Write-Warning $WBConfig[3]
-		} else {
-				$Schedule = $($WBConfig[12] -split ": ")[1].Trim() -split ","
-				$BackupSet = $($WBConfig[11] -split ": ")[1].Trim() -split ","
-				Write-Host "Schedule: ", $Schedule
-				Write-Host
-				Write-Host "Configured targets: "
-				$BackupSet.ForEach({ "    " + $_ })
-				Write-Host
-				$Versions = $(WBAdmin.exe get versions) | Select-String "version"
-				Write-Host $Versions.Count "available backups."
-				$ListAvailableBackups = $(Read-Host "Enter Yes to enumerate all backups, not just those online").tolower().StartsWith('yes')
-				Write-Host
-				Write-Host "Disk(s) online:"
+		}
+		else {
+			$Schedule = $($WBConfig[12] -split ": ")[1].Trim() -split ","
+			$BackupSet = $($WBConfig[11] -split ": ")[1].Trim() -split ","
+			Write-Host "Schedule: ", $Schedule
+			Write-Host
+			Write-Host "Configured targets: "
+			$BackupSet.ForEach({ "    " + $_ })
+			Write-Host
+			$Versions = $(WBAdmin.exe get versions) | Select-String "version"
+			Write-Host $Versions.Count "available backups."
+			$ListAvailableBackups = $(Read-Host "Enter Yes to enumerate all backups, not just those online").tolower().StartsWith('yes')
+			Write-Host
+			Write-Host "Disk(s) online:"
 
-				[System.Object[]] $Sessions = Get-ISCSISession
-				Foreach ($Session in $Sessions)
-				{
-					$Volume = $Session | Get-Disk | Get-Partition | Get-Volume
-					Foreach ($Drive in $BackupSet)
-					{
-						If ( $Drive+"\" -eq $Volume.Path) {
-							$Server= (Get-IscsiConnection -iSCSISession $Session).TargetAddress
-							$iSCSIQualifiedName = ($Session | Get-ISCSITarget).NodeAddress
-							$Discard, $TargetName = $iSCSIQualifiedName.split(":")
-							Write-Host
-							$Volume | Out-String
-							# The IQN may contain multiple delimiters
-							Write-Host "  iSCSI target: $($iSCSIQualifiedName) - $($Server)"
-							Write-Host "        Volume: $($TargetName) -> [$($Volume.FileSystemLabel)]"
-							Write-Host "wbadmin target: $Drive"
-						}
+			[System.Object[]] $Sessions = Get-IscsiSession
+			foreach ($Session in $Sessions) {
+				$Volume = $Session | Get-Disk | Get-Partition | Get-Volume
+				foreach ($Drive in $BackupSet) {
+					if ( $Drive + "\" -eq $Volume.Path) {
+						$Server = (Get-IscsiConnection -IscsiSession $Session).TargetAddress
+						$iSCSIQualifiedName = ($Session | Get-IscsiTarget).NodeAddress
+						$Discard, $TargetName = $iSCSIQualifiedName.split(":")
+						Write-Host
+						$Volume | Out-String
+						# The IQN may contain multiple delimiters
+						Write-Host "  iSCSI target: $($iSCSIQualifiedName) - $($Server)"
+						Write-Host "        Volume: $($TargetName) -> [$($Volume.FileSystemLabel)]"
+						Write-Host "wbadmin target: $Drive"
 					}
 				}
-				Write-Host
-				If ($ListAvailableBackups) { WBAdmin.exe get versions }
+			}
+			Write-Host
+			if ($ListAvailableBackups) { WBAdmin.exe get versions }
 		}
-	} else { Write-Warning "Update this script for $WBadminRelease" }
+	}
+ else { Write-Warning "Update this script for $WBadminRelease" }
 
 	Stop-Transcript
 
 	Pause
-	Exit 0
+	exit 0
 }
 
 
@@ -121,11 +121,11 @@ $newsize.width = 150            # Set the new buffer's width to 150 columns.
 $pswindow.buffersize = $newsize # Set the new Buffer Size as active.
 
 $newsize = $pswindow.windowsize # Get the UI's current Window Size.
-Try {
+try {
 	$newsize.width = 150            # Set the new Window Width to 150 columns.
 	$pswindow.windowsize = $newsize 
 } # Set the new Window Size as active.
-Catch {
+catch {
  $newsize.width = 102            # Set the new Window Width to MAX columns for a batch job.
 	$pswindow.windowsize = $newsize 
 } # Set the new Window Size as active.
@@ -166,7 +166,7 @@ Write-Host "Overall Performance Setting:" (Get-WBPerformanceConfiguration -Overa
 Write-Host
 $ThisSetup = Get-WBPolicy
 $Sources = Get-WBVolume -Policy $ThisSetup
-ForEach ($Source in $Sources) {
+foreach ($Source in $Sources) {
 	if ($Source.MountPath -ne "") {
 		$ThisVolume = Get-WBVolume -VolumePath $Source.MountPath
 		Write-Host "Performance Setting for $Source set to " (Get-WBPerformanceConfiguration -Volume $ThisVolume)
@@ -191,7 +191,7 @@ Write-Host
 Write-Host "Status of the backup set:"
 $WBVolume = @()
 $WBPaths = @()
-ForEach ($Target in $ThisSetup.BackupTargets) {
+foreach ($Target in $ThisSetup.BackupTargets) {
 	$WBVolume += New-Object -Type PSObject -Property @{
 		Label      = $Target.Label
 		Path       = $Target.Path
@@ -218,7 +218,7 @@ foreach ( $Orphan in $OtherShadows ) {
 		Differential = $Orphan.Differential
 	}
 }
-If ($InUse.Count -gt 0) {
+if ($InUse.Count -gt 0) {
 	Write-Host "-------------------------------------------------------------------------------------------------------------------------------------------"
 	Write-Host
 	Write-Host "Active shadows in use on this system : "
@@ -250,12 +250,12 @@ $shadowcopies = Get-WmiObject -Class "Win32_ShadowCopy"
 
 
 Write-Host "-------------------------------------------------------------------------------------------------------------------------------------------"
-ForEach ($Volume in $Volumes) {
+foreach ($Volume in $Volumes) {
 	$Lint = $Volume.Path + '\' # BackTicks to avoid regex
 	Write-Host $Volume.Label, "[", $Lint, "]"
 
 	# If this volume is a iSCSI target, show it's location
-	Foreach ($Session in $Sessions) {
+	foreach ($Session in $Sessions) {
 		$VolumeLabel = ($Session | Get-Disk | Get-Partition | Get-Volume )
 		if ( $VolumeLabel.Path -eq $Lint ) {
 			$Server = (Get-IscsiConnection -IscsiSession $Session).TargetAddress
@@ -270,12 +270,12 @@ ForEach ($Volume in $Volumes) {
 	$ShadowStorage | Where-Object { $_.DiffVolume -eq $Lint } | Format-Table MaxSpaceGB, AllocatedSpaceGB, UsedSpaceGB -AutoSize
 	$Copies = $shadowcopies | Where-Object { $_.VolumeName -eq $Lint } | Sort-Object -Property ID
 	$WBSet = Get-WBBackupSet | Where-Object { $_.BackupTarget.Path -eq $Volume.Path } | Sort-Object -Property SnapshotId 
-	$Connected = Foreach ($WB in $WBSet) {
+	$Connected = foreach ($WB in $WBSet) {
 		[pscustomobject]@{
 			VersionID       = $WB.VersionID
-			BackupTime      =  $WB.BackupTime
+			BackupTime      = $WB.BackupTime
 			VssBackupOption = $WB.VssBackupOption
-			SnapshotId      =  $WB.SnapshotId
+			SnapshotId      = $WB.SnapshotId
 			Shadow          = $Copies | Where-Object { $_.ID -eq '{' + $WB.SnapshotId + '}' } | Select-Object -ExpandProperty DeviceObject
 		}
 	}
@@ -288,4 +288,4 @@ ForEach ($Volume in $Volumes) {
 Stop-Transcript
 
 Pause
-Exit 0
+exit 0
