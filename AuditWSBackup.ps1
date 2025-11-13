@@ -1,5 +1,5 @@
 ##******************************************************************
-## Revision date: 2024.01.09
+## Revision date: 2025.11.13
 ##
 ## Copyright (c) 2021 PC-Évolution enr.
 ## This code is licensed under the GNU General Public License (GPL).
@@ -50,17 +50,67 @@ else {
 
 # Run your code that needs to be elevated here...
 
-$OSCaption = (Get-WmiObject Win32_OperatingSystem).Caption
-If (-not $OSCaption.Contains("Server")) {
-	Write-Output "A Server version of Windows is required ... to run Windows Server Backup ;-)"
-	Pause
-	Exit 911
-}
-
-
 $DesktopPath = [System.Environment]::GetFolderPath([System.Environment+SpecialFolder]::Desktop)
 
 Start-Transcript -Path "$DesktopPath\WSBCatalogAudit.txt" -Append
+
+$OSCaption = (Get-WmiObject Win32_OperatingSystem).Caption
+If ((Get-WmiObject Win32_OperatingSystem).ProductType -eq 1) {
+	Write-Host
+	Write-Host "Windows Backup Catalog Audit for" $env:ComputerName "[" $OSCaption "]"
+	Write-Host "------------------------------------------------------------------------------------------"
+
+	# There is limited WBEngine support on Windows Workstations
+	$WBConfig = $(wbadmin enable backup)
+	$WBadminRelease = $($WBConfig[0] -split "-")[0].Trim()
+	If ( $WBadminRelease -eq "wbadmin 1.0" ) {
+		If ( ($Null -eq $WBConfig[7]) -and ($Null -eq $WBConfig[12]) ) {
+			# Nothing is scheduled yet
+			Write-Warning $WBConfig[3]
+		} else {
+				$Schedule = $($WBConfig[12] -split ": ")[1].Trim() -split ","
+				$BackupSet = $($WBConfig[11] -split ": ")[1].Trim() -split ","
+				Write-Host "Schedule: ", $Schedule
+				Write-Host
+				Write-Host "Configured targets: "
+				$BackupSet.ForEach({ "    " + $_ })
+				Write-Host
+				$Versions = $(WBAdmin.exe get versions) | Select-String "version"
+				Write-Host $Versions.Count "available backups."
+				$ListAvailableBackups = $(Read-Host "Enter Yes to enumerate all backups, not just those online").tolower().StartsWith('yes')
+				Write-Host
+				Write-Host "Disk(s) online:"
+
+				[System.Object[]] $Sessions = Get-ISCSISession
+				Foreach ($Session in $Sessions)
+				{
+					$Volume = $Session | Get-Disk | Get-Partition | Get-Volume
+					Foreach ($Drive in $BackupSet)
+					{
+						If ( $Drive+"\" -eq $Volume.Path) {
+							$Server= (Get-IscsiConnection -iSCSISession $Session).TargetAddress
+							$iSCSIQualifiedName = ($Session | Get-ISCSITarget).NodeAddress
+							$Discard, $TargetName = $iSCSIQualifiedName.split(":")
+							Write-Host
+							$Volume | Out-String
+							# The IQN may contain multiple delimiters
+							Write-Host "  iSCSI target: $($iSCSIQualifiedName) - $($Server)"
+							Write-Host "        Volume: $($TargetName) -> [$($Volume.FileSystemLabel)]"
+							Write-Host "wbadmin target: $Drive"
+						}
+					}
+				}
+				Write-Host
+				If ($ListAvailableBackups) { WBAdmin.exe get versions }
+		}
+	} else { Write-Warning "Update this script for $WBadminRelease" }
+
+	Stop-Transcript
+
+	Pause
+	Exit 0
+}
+
 
 # Adapted from https://www.nsoftware.com/kb/articles/powershell-server-changing-terminal-width.rst
 $pshost = Get-Host              # Get the PowerShell Host.

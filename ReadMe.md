@@ -2,16 +2,21 @@
 
 ## Purpose:
 
-Prepare an audit of the Windows Server Backup installation on a Windows Server.
+Prepare an audit of the Windows Backup installation on a Windows Server or Workstation.
 
 This may assist you in auditing your backup rotation scheme and backup retention policy.
 
-The report includes:
+For servers, the report includes:
 - The history of backup operations on the server, including the number of versions available.
 - The details of disk volumes on the server
 - The overall performance setting and the performanace setting of each volume configured in the backup
 - The online status of each target in the backut set
 - For each target in the backup set, the volume label (and iSCSI related data, if applicable) and the history of each backup version stored on this target, in reverse chronological order.
+
+For workstations, the report includes
+- An enumeration of the configured targets
+- An optional list of all available backups
+- A description of the online backups target(s)
 
 A transcript log of the console output is stored on the user's desktop and named C:\Users\<LoggedOnUser>\Desktop\WSBCatalogAudit.txt
 
